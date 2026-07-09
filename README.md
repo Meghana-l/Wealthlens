@@ -2,7 +2,7 @@
 
 Product analytics command center for digital wealth platforms. WealthLens turns client behavior into product decisions — tracking how clients across wealth segments discover, onboard, engage, and retain, and connecting that behavior to live market conditions.
 
-### It is live: [https://wealthlens-o46p4opso-meghanalnswamydr-5532s-projects.vercel.app/](https://wealthlens-xi.vercel.app/)
+### It is live: https://wealthlens-xi.vercel.app
 
 ## What it does
 
