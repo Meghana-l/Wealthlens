@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WealthLens · Product Analytics Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --paper:#FBFAF7; --panel:#FFFFFF; --ink:#13293F; --ink-soft:#43596F;
+  --line:#E5E1D8; --gold:#A8842C; --gold-soft:#F4EDDC;
+  --green:#1E7B4D; --green-soft:#E6F2EB; --red:#B23A3A; --red-soft:#F7E9E9;
+  --blue:#2C5F8A; --blue-soft:#E8F0F6; --mono:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:'Libre Franklin',sans-serif;font-size:14px;line-height:1.5}
+a{color:inherit}
+
+/* ---------- header ---------- */
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:0 28px}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;height:58px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-size:19px;font-weight:800;letter-spacing:-.3px}
+.brand h1 span{color:var(--gold)}
+.brand small{font-size:11px;color:var(--ink-soft);letter-spacing:.4px;text-transform:uppercase}
+.env{font-family:var(--mono);font-size:11px;color:var(--ink-soft);display:flex;gap:14px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---------- signature pulse ticker ---------- */
+.ticker{background:var(--ink);color:#EAE6DC;overflow:hidden;white-space:nowrap;font-family:var(--mono);font-size:12px;height:32px;display:flex;align-items:center}
+.ticker-track{display:inline-block;padding-left:100%;animation:scroll 55s linear infinite}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+.ticker b{color:#D9B75B;font-weight:600}
+.ticker .up{color:#8FD1A8}.ticker .dn{color:#E39A9A}
+.ticker-item{margin-right:44px}
+
+/* ---------- nav ---------- */
+nav{display:flex;gap:2px;padding:0 28px;background:var(--panel);border-bottom:1px solid var(--line)}
+nav button{background:none;border:none;padding:12px 16px;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent}
+nav button.active{color:var(--ink);border-bottom-color:var(--gold)}
+nav button:hover{color:var(--ink)}
+
+main{max-width:1240px;margin:0 auto;padding:24px 28px 60px}
+.tab{display:none}.tab.active{display:block}
+h2{font-size:16px;font-weight:700;margin-bottom:4px}
+.sub{color:var(--ink-soft);font-size:13px;margin-bottom:18px}
+
+/* ---------- cards & grids ---------- */
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+.kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft);font-weight:600}
+.kpi .value{font-family:var(--mono);font-size:26px;font-weight:600;margin:6px 0 2px}
+.kpi .delta{font-size:12px;font-weight:600}
+.delta.up{color:var(--green)}.delta.dn{color:var(--red)}
+.card h3{font-size:13px;font-weight:700;margin-bottom:12px}
+.chart-wrap{position:relative;height:240px}
+.chart-wrap.tall{height:300px}
+.mt{margin-top:14px}
+
+/* ---------- activity feed ---------- */
+.feed{max-height:262px;overflow-y:auto}
+.feed-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:baseline}
+.feed-item:last-child{border-bottom:none}
+.feed-time{font-family:var(--mono);font-size:11px;color:var(--ink-soft);min-width:56px}
+.pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.pill.ma{background:var(--blue-soft);color:var(--blue)}
+.pill.hnw{background:var(--gold-soft);color:var(--gold)}
+.pill.uhnw{background:#EFE7F5;color:#6C4A8E}
+.pill.corp{background:var(--green-soft);color:var(--green)}
+
+/* ---------- funnel ---------- */
+.seg-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.seg-row button{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:6px 14px;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+.seg-row button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.funnel-stage{display:grid;grid-template-columns:190px 1fr 120px;gap:14px;align-items:center;padding:9px 0}
+.funnel-bar{height:30px;background:var(--blue-soft);border-radius:4px;position:relative;overflow:hidden}
+.funnel-fill{height:100%;background:linear-gradient(90deg,var(--blue),#4B83B4);border-radius:4px;transition:width .6s ease}
+.funnel-num{font-family:var(--mono);font-size:13px;text-align:right}
+.funnel-name{font-size:13px;font-weight:600}
+.dropoff{font-size:11.5px;color:var(--red);font-weight:600;font-family:var(--mono)}
+
+/* ---------- cohort heatmap ---------- */
+.cohort{display:grid;grid-template-columns:110px repeat(8,1fr);gap:4px;font-family:var(--mono);font-size:11px}
+.cohort .hd{color:var(--ink-soft);text-align:center;padding:4px 0;font-weight:600}
+.cohort .rowlab{color:var(--ink-soft);padding:6px 4px}
+.cell{text-align:center;padding:7px 0;border-radius:3px;font-weight:500}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft);padding:8px 10px;border-bottom:2px solid var(--line);font-weight:700}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.mono{font-family:var(--mono);font-size:12px}
+.tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:3px}
+.tag.ok{background:var(--green-soft);color:var(--green)}
+.tag.rev{background:var(--gold-soft);color:var(--gold)}
+.tag.pii{background:var(--red-soft);color:var(--red)}
+.tag.no{background:#EEF0F2;color:var(--ink-soft)}
+
+/* ---------- AI ---------- */
+.ai-btn{background:var(--ink);color:#fff;border:none;border-radius:6px;padding:11px 20px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+.ai-btn:hover{background:#1D3A57}
+.ai-btn:disabled{opacity:.5;cursor:wait}
+.ai-out{margin-top:18px;line-height:1.65;font-size:13.5px}
+.ai-out h4{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);margin:16px 0 8px}
+.ai-out ol{margin-left:20px}
+.ai-out li{margin-bottom:8px}
+.ai-note{font-size:12px;color:var(--ink-soft);margin-top:10px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+footer{text-align:center;color:var(--ink-soft);font-size:11.5px;padding:26px 0;border-top:1px solid var(--line);margin-top:40px}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}.g2,.g3{grid-template-columns:1fr}.funnel-stage{grid-template-columns:120px 1fr 90px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-top">
+    <div class="brand">
+      <h1>Wealth<span>Lens</span></h1>
+      <small>Product Analytics Command Center</small>
+    </div>
+    <div class="env">
+      <span><span class="dot"></span>LIVE</span>
+      <span id="clock">—</span>
+    </div>
+  </div>
+</header>
+
+<div class="ticker"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<nav>
+  <button class="active" data-tab="overview">Overview</button>
+  <button data-tab="journeys">Journeys</button>
+  <button data-tab="behavior">Behavior</button>
+  <button data-tab="market">Market</button>
+  <button data-tab="tracking">Tracking Plan</button>
+  <button data-tab="ai">AI Insights</button>
+</nav>
+
+<main>
+
+<!-- ================= OVERVIEW ================= -->
+<section class="tab active" id="tab-overview">
+  <h2>Platform Overview</h2>
+  <p class="sub">Live engagement across the client and advisor digital experience. Metrics stream in real time.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">Active Clients Today</div><div class="value" id="k-active">—</div><div class="delta up" id="k-active-d">▲ vs yesterday</div></div>
+    <div class="card kpi"><div class="label">Sessions / Hour</div><div class="value" id="k-sessions">—</div><div class="delta up" id="k-sessions-d">▲</div></div>
+    <div class="card kpi"><div class="label">Accounts Funded Today</div><div class="value" id="k-funded">—</div><div class="delta up" id="k-funded-d">▲</div></div>
+    <div class="card kpi"><div class="label">Goal Plans Created</div><div class="value" id="k-goals">—</div><div class="delta up" id="k-goals-d">▲</div></div>
+  </div>
+  <div class="grid g2 mt">
+    <div class="card">
+      <h3>Client Sessions · Rolling 60 Minutes</h3>
+      <div class="chart-wrap"><canvas id="chSessions"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Live Client Activity</h3>
+      <div class="feed" id="feed"></div>
+    </div>
+  </div>
+  <div class="grid g2 mt">
+    <div class="card">
+      <h3>Feature Adoption · 30 Days</h3>
+      <div class="chart-wrap"><canvas id="chAdoption"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Sessions by Wealth Segment</h3>
+      <div class="chart-wrap"><canvas id="chSegments"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= JOURNEYS ================= -->
+<section class="tab" id="tab-journeys">
+  <h2>Onboarding Journey</h2>
+  <p class="sub">Conversion through the six-stage onboarding funnel, by wealth segment. Trailing 30 days.</p>
+  <div class="seg-row" id="segButtons">
+    <button class="active" data-seg="all">All Segments</button>
+    <button data-seg="ma">Mass Affluent</button>
+    <button data-seg="hnw">High Net Worth</button>
+    <button data-seg="uhnw">Ultra High Net Worth</button>
+    <button data-seg="corp">Corporate Planning</button>
+  </div>
+  <div class="card" id="funnel"></div>
+  <div class="grid g2 mt">
+    <div class="card">
+      <h3>Stage Conversion by Segment</h3>
+      <div class="chart-wrap tall"><canvas id="chFunnelCompare"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Where Journeys Stall</h3>
+      <table>
+        <thead><tr><th>Drop-off Point</th><th>Segment Most Affected</th><th>30-Day Loss</th><th>Leading Signal</th></tr></thead>
+        <tbody>
+          <tr><td>Risk Assessment → Fund Account</td><td><span class="pill ma">Mass Affluent</span></td><td class="mono">2,847 clients</td><td>Exit on transfer-amount screen; 68% on mobile</td></tr>
+          <tr><td>Fund Account → First Investment</td><td><span class="pill hnw">High Net Worth</span></td><td class="mono">912 clients</td><td>Funded accounts idle &gt;7 days before first trade</td></tr>
+          <tr><td>Create Profile → Risk Assessment</td><td><span class="pill corp">Corporate</span></td><td class="mono">1,205 clients</td><td>Session ends at questionnaire page 2 of 4</td></tr>
+          <tr><td>First Investment → Set a Goal</td><td><span class="pill uhnw">Ultra HNW</span></td><td class="mono">188 clients</td><td>Goal planner discovery is low from portfolio view</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BEHAVIOR ================= -->
+<section class="tab" id="tab-behavior">
+  <h2>Consumer Behavior</h2>
+  <p class="sub">How clients actually use the platform — retention, engagement depth, and behavior under market stress.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Market Volatility vs. Client Engagement <span class="mono" id="corrNote" style="font-weight:400;color:var(--ink-soft)"></span></h3>
+      <div class="chart-wrap tall"><canvas id="chCorr"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Weekly Retention Cohorts <span class="mono" style="font-weight:400;color:var(--ink-soft)">· % returning</span></h3>
+      <div class="cohort" id="cohort"></div>
+    </div>
+  </div>
+  <div class="grid g2 mt">
+    <div class="card">
+      <h3>Session Depth by Segment</h3>
+      <div class="chart-wrap"><canvas id="chDepth"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Behavioral Reads</h3>
+      <table>
+        <thead><tr><th>Pattern</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td>Volatility drives check-in behavior</td><td>Sessions rise with the volatility index; clients open the app to look, not to trade — trade rate per session falls on high-VIX days</td></tr>
+          <tr><td>Corporate clients are calendar-driven</td><td>Engagement spikes around payroll and equity vesting dates, not market events</td></tr>
+          <tr><td>Goal-planner users retain 2.3× better</td><td>Week-8 retention is 61% for clients with an active goal plan vs 26% without</td></tr>
+          <tr><td>Mobile is the loyalty surface</td><td>Clients active on both web and mobile hold 3.1× more sessions per week than web-only clients</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MARKET ================= -->
+<section class="tab" id="tab-market">
+  <h2>Market Pulse</h2>
+  <p class="sub">Live market context behind client behavior. Sourced in real time from the Federal Reserve (FRED) and the ECB reference rates.</p>
+  <div class="grid g4" id="marketKpis">
+    <div class="card kpi"><div class="label">Volatility Index (VIX)</div><div class="value" id="m-vix">—</div><div class="delta" id="m-vix-d"></div></div>
+    <div class="card kpi"><div class="label">S&amp;P 500</div><div class="value" id="m-sp">—</div><div class="delta" id="m-sp-d"></div></div>
+    <div class="card kpi"><div class="label">10-Year Treasury</div><div class="value" id="m-t10">—</div><div class="delta" id="m-t10-d"></div></div>
+    <div class="card kpi"><div class="label">Fed Funds Rate</div><div class="value" id="m-ff">—</div><div class="delta" id="m-ff-d"></div></div>
+  </div>
+  <div class="grid g2 mt">
+    <div class="card">
+      <h3>S&amp;P 500 · Trailing Observations</h3>
+      <div class="chart-wrap"><canvas id="chSp"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Volatility Index · Trailing Observations</h3>
+      <div class="chart-wrap"><canvas id="chVix"></canvas></div>
+    </div>
+  </div>
+  <div class="card mt">
+    <h3>USD Reference Rates · Live (Frankfurter / ECB)</h3>
+    <table><thead><tr><th>Pair</th><th>Rate</th><th>Pair</th><th>Rate</th></tr></thead><tbody id="fxBody"><tr><td colspan="4" class="mono">Loading live rates…</td></tr></tbody></table>
+  </div>
+</section>
+
+<!-- ================= TRACKING PLAN ================= -->
+<section class="tab" id="tab-tracking">
+  <h2>Tracking Plan &amp; Data Governance</h2>
+  <p class="sub">The analytics specification behind every number on this platform — event definitions, ownership, PII classification, and governance status.</p>
+  <div class="grid g3">
+    <div class="card kpi"><div class="label">Events in Production</div><div class="value">14</div></div>
+    <div class="card kpi"><div class="label">Governance Approved</div><div class="value" style="color:var(--green)">11</div></div>
+    <div class="card kpi"><div class="label">In Review</div><div class="value" style="color:var(--gold)">3</div></div>
+  </div>
+  <div class="card mt">
+    <table>
+      <thead><tr><th>Event</th><th>Fires When</th><th>Key Properties</th><th>Owner</th><th>PII</th><th>Status</th></tr></thead>
+      <tbody id="trackingBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================= AI ================= -->
+<section class="tab" id="tab-ai">
+  <h2>AI Product Insights</h2>
+  <p class="sub">Sends the live metrics snapshot — engagement, funnel, retention, and current market indicators — to an LLM analyst and returns leadership-ready insights and a prioritized backlog.</p>
+  <div class="card">
+    <button class="ai-btn" id="aiBtn">Generate Insights from Live Data</button>
+    <div class="ai-out" id="aiOut"></div>
+    <div class="ai-note" id="aiNote"></div>
+  </div>
+</section>
+
+<footer>WealthLens · Product analytics for digital wealth platforms · Client activity is modeled; market data is live</footer>
+</main>
+
+<script>
+/* =====================================================
+   STATE + LIVE ENGINE
+===================================================== */
+const state = {
+  active: 18432, sessionsHr: 1210, funded: 342, goals: 517,
+  sessionSeries: [], vixLatest: null, macro: null,
+  seg: 'all'
+};
+
+const SEGMENTS = {
+  ma:  {name:'Mass Affluent', pill:'ma'},
+  hnw: {name:'High Net Worth', pill:'hnw'},
+  uhnw:{name:'Ultra High Net Worth', pill:'uhnw'},
+  corp:{name:'Corporate Planning', pill:'corp'}
+};
+
+const NAMES = ['A. Whitfield','J. Okafor','M. Castellanos','R. Iyer','S. Lindqvist','D. Boateng','K. Yamamoto','L. Marchetti','P. Novak','T. Adeyemi','C. Duval','N. Petrov','H. Solberg','B. Ferreira','E. Kowalski','G. Andersson'];
+const ACTIONS = [
+  {t:'opened the portfolio dashboard', w:26},
+  {t:'ran a retirement goal projection', w:12},
+  {t:'completed the risk assessment', w:9},
+  {t:'funded an account', w:6, kpi:'funded'},
+  {t:'created a new goal plan', w:8, kpi:'goals'},
+  {t:'reviewed quarterly performance', w:14},
+  {t:'messaged their advisor', w:10},
+  {t:'placed a rebalance order', w:5},
+  {t:'downloaded a tax document', w:7},
+  {t:'explored the equity vesting planner', w:6}
+];
+const ACTION_POOL = ACTIONS.flatMap(a => Array(a.w).fill(a));
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function fmt(n){ return n.toLocaleString('en-US'); }
+
+// Engagement intensity scales with real market volatility once loaded
+function intensity(){
+  if (state.vixLatest == null) return 1;
+  return Math.min(1.9, Math.max(0.75, state.vixLatest / 18));
+}
+
+function tickClock(){
+  document.getElementById('clock').textContent =
+    new Date().toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ---------- live activity feed + counters ---------- */
+const feed = document.getElementById('feed');
+function addEvent(){
+  const segKey = pick(['ma','ma','ma','hnw','hnw','corp','corp','uhnw']);
+  const seg = SEGMENTS[segKey];
+  const action = pick(ACTION_POOL);
+  const time = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const row = document.createElement('div');
+  row.className = 'feed-item';
+  row.innerHTML = `<span class="feed-time">${time}</span><span class="pill ${seg.pill}">${seg.name.split(' ')[0]}</span><span>${pick(NAMES)} ${action.t}</span>`;
+  feed.prepend(row);
+  while (feed.children.length > 22) feed.removeChild(feed.lastChild);
+
+  state.active += Math.random() < 0.6 ? 1 : 0;
+  if (action.kpi === 'funded') state.funded += 1;
+  if (action.kpi === 'goals') state.goals += 1;
+  renderKpis();
+  scheduleEvent();
+}
+function scheduleEvent(){
+  const base = 2600 / intensity();
+  setTimeout(addEvent, base * (0.5 + Math.random()));
+}
+
+function renderKpis(){
+  document.getElementById('k-active').textContent = fmt(state.active);
+  document.getElementById('k-sessions').textContent = fmt(state.sessionsHr);
+  document.getElementById('k-funded').textContent = fmt(state.funded);
+  document.getElementById('k-goals').textContent = fmt(state.goals);
+  document.getElementById('k-active-d').textContent = '▲ 6.4% vs yesterday';
+  document.getElementById('k-sessions-d').textContent = `▲ ${(intensity()*4.1).toFixed(1)}% vs trailing avg`;
+  document.getElementById('k-funded-d').textContent = '▲ 3.2% vs 7-day avg';
+  document.getElementById('k-goals-d').textContent = '▲ 9.8% vs 7-day avg';
+}
+
+/* =====================================================
+   CHARTS
+===================================================== */
+Chart.defaults.font.family = "'Libre Franklin',sans-serif";
+Chart.defaults.color = '#43596F';
+Chart.defaults.borderColor = '#E9E5DC';
+
+// rolling sessions line
+const now = Date.now();
+for (let i = 59; i >= 0; i--) {
+  state.sessionSeries.push({
+    x: new Date(now - i*60000).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+    y: Math.round(1150 + Math.sin(i/6)*90 + Math.random()*70)
+  });
+}
+const chSessions = new Chart(document.getElementById('chSessions'),{
+  type:'line',
+  data:{labels:state.sessionSeries.map(p=>p.x),datasets:[{data:state.sessionSeries.map(p=>p.y),borderColor:'#2C5F8A',backgroundColor:'rgba(44,95,138,.08)',fill:true,tension:.35,pointRadius:0,borderWidth:2}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:6}},y:{grace:'10%'}}}
+});
+setInterval(()=>{
+  const y = Math.round((1150 + Math.random()*140) * intensity());
+  state.sessionsHr = y;
+  state.sessionSeries.push({x:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),y});
+  state.sessionSeries.shift();
+  chSessions.data.labels = state.sessionSeries.map(p=>p.x);
+  chSessions.data.datasets[0].data = state.sessionSeries.map(p=>p.y);
+  chSessions.update('none');
+  renderKpis();
+}, 5000);
+
+new Chart(document.getElementById('chAdoption'),{
+  type:'bar',
+  data:{labels:['Portfolio View','Goal Planner','Advisor Chat','Performance Reports','Tax Center','Vesting Planner'],
+    datasets:[{label:'% of active clients',data:[91,44,38,57,29,17],backgroundColor:['#2C5F8A','#A8842C','#2C5F8A','#2C5F8A','#2C5F8A','#2C5F8A'],borderRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{max:100,ticks:{callback:v=>v+'%'}}}}
+});
+
+new Chart(document.getElementById('chSegments'),{
+  type:'doughnut',
+  data:{labels:['Mass Affluent','High Net Worth','Corporate Planning','Ultra High Net Worth'],
+    datasets:[{data:[52,24,18,6],backgroundColor:['#2C5F8A','#A8842C','#1E7B4D','#6C4A8E'],borderWidth:2,borderColor:'#fff'}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}},cutout:'62%'}
+});
+
+/* =====================================================
+   FUNNEL
+===================================================== */
+const STAGES = ['Discover','Create Profile','Risk Assessment','Fund Account','First Investment','Set a Goal'];
+const FUNNELS = {
+  all:  [42800, 31350, 24980, 15400, 11210, 7850],
+  ma:   [24900, 17820, 13930, 7480, 5160, 3290],
+  hnw:  [9400, 7420, 6310, 4620, 3480, 2510],
+  uhnw: [1900, 1660, 1490, 1230, 1010, 822],
+  corp: [6600, 4450, 3250, 2070, 1560, 1228]
+};
+function renderFunnel(){
+  const data = FUNNELS[state.seg];
+  const max = data[0];
+  const el = document.getElementById('funnel');
+  el.innerHTML = STAGES.map((s,i)=>{
+    const pct = (data[i]/max*100).toFixed(1);
+    const drop = i>0 ? `−${(100 - data[i]/data[i-1]*100).toFixed(0)}%` : '';
+    return `<div class="funnel-stage">
+      <div><div class="funnel-name">${i+1}. ${s}</div>${drop?`<div class="dropoff">${drop} from prior stage</div>`:''}</div>
+      <div class="funnel-bar"><div class="funnel-fill" style="width:${pct}%"></div></div>
+      <div class="funnel-num">${fmt(data[i])}<br><span style="color:var(--ink-soft)">${pct}%</span></div>
+    </div>`;
+  }).join('');
+}
+renderFunnel();
+document.getElementById('segButtons').addEventListener('click', e=>{
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('#segButtons button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.seg = e.target.dataset.seg;
+  renderFunnel();
+});
+
+new Chart(document.getElementById('chFunnelCompare'),{
+  type:'bar',
+  data:{labels:STAGES,datasets:[
+    {label:'Mass Affluent',data:FUNNELS.ma.map(v=>+(v/FUNNELS.ma[0]*100).toFixed(1)),backgroundColor:'#2C5F8A'},
+    {label:'High Net Worth',data:FUNNELS.hnw.map(v=>+(v/FUNNELS.hnw[0]*100).toFixed(1)),backgroundColor:'#A8842C'},
+    {label:'Ultra HNW',data:FUNNELS.uhnw.map(v=>+(v/FUNNELS.uhnw[0]*100).toFixed(1)),backgroundColor:'#6C4A8E'},
+    {label:'Corporate',data:FUNNELS.corp.map(v=>+(v/FUNNELS.corp[0]*100).toFixed(1)),backgroundColor:'#1E7B4D'}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,scales:{y:{max:100,ticks:{callback:v=>v+'%'}},x:{ticks:{maxRotation:30}}},plugins:{legend:{position:'bottom'}}}
+});
+
+/* =====================================================
+   BEHAVIOR
+===================================================== */
+const cohortEl = document.getElementById('cohort');
+const cohortRows = ['May 25','Jun 01','Jun 08','Jun 15','Jun 22','Jun 29','Jul 06'];
+const cohortData = [
+  [100, 58, 47, 41, 37, 34, 32, 30],
+  [100, 61, 49, 43, 38, 35, 33, null],
+  [100, 57, 46, 40, 36, 33, null, null],
+  [100, 63, 52, 45, 41, null, null, null],
+  [100, 66, 54, 48, null, null, null, null],
+  [100, 64, 53, null, null, null, null, null],
+  [100, 69, null, null, null, null, null, null]
+];
+let html = '<div class="hd" style="text-align:left">Cohort</div>';
+for (let w=0; w<8; w++) html += `<div class="hd">W${w}</div>`;
+cohortRows.forEach((r,i)=>{
+  html += `<div class="rowlab">${r}</div>`;
+  cohortData[i].forEach(v=>{
+    if (v==null){ html += '<div class="cell" style="background:#F4F2EC;color:#C8C2B4">·</div>'; return; }
+    const a = Math.min(0.92, v/100 + 0.06);
+    const light = v > 55 ? '#fff' : '#13293F';
+    html += `<div class="cell" style="background:rgba(44,95,138,${a});color:${light}">${v}</div>`;
+  });
+});
+cohortEl.innerHTML = html;
+
+new Chart(document.getElementById('chDepth'),{
+  type:'bar',
+  data:{labels:['Pages / Session','Minutes / Session','Sessions / Week'],datasets:[
+    {label:'Mass Affluent',data:[4.1,3.2,2.4],backgroundColor:'#2C5F8A'},
+    {label:'High Net Worth',data:[6.8,5.9,3.7],backgroundColor:'#A8842C'},
+    {label:'Ultra HNW',data:[8.2,7.4,4.9],backgroundColor:'#6C4A8E'},
+    {label:'Corporate',data:[5.0,4.1,1.9],backgroundColor:'#1E7B4D'}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+});
+
+let chCorr = null;
+function renderCorr(vixSeries){
+  const labels = [], vix = [], eng = [];
+  const src = (vixSeries && vixSeries.length >= 20) ? vixSeries.slice(-30) : null;
+  document.getElementById('corrNote').textContent = src ? '· volatility: live FRED data' : '· volatility: recent reference values';
+  const fallback = [14.2,13.9,14.8,15.6,15.1,16.4,17.9,17.2,16.8,18.5,20.1,19.4,18.2,17.5,16.9,16.1,15.8,16.6,17.8,19.2,21.4,20.6,19.1,18.4,17.7,17.0,16.3,15.9,16.7,17.4];
+  const values = src ? src.map(o=>o.value) : fallback;
+  const dates  = src ? src.map(o=>o.date.slice(5)) : fallback.map((_,i)=>`D${i+1}`);
+  values.forEach((v,i)=>{
+    labels.push(dates[i]);
+    vix.push(v);
+    eng.push(Math.round(980 + v*38 + (Math.sin(i/3)*40)));
+  });
+  if (chCorr) chCorr.destroy();
+  chCorr = new Chart(document.getElementById('chCorr'),{
+    data:{labels,datasets:[
+      {type:'line',label:'Volatility Index',data:vix,borderColor:'#B23A3A',yAxisID:'y1',tension:.3,pointRadius:0,borderWidth:2},
+      {type:'line',label:'Daily Client Sessions (000s scaled)',data:eng,borderColor:'#2C5F8A',backgroundColor:'rgba(44,95,138,.07)',fill:true,yAxisID:'y',tension:.3,pointRadius:0,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},
+      scales:{x:{ticks:{maxTicksLimit:8}},y:{position:'left',title:{display:true,text:'Sessions'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'VIX'}}}}
+  });
+}
+renderCorr(null);
+
+/* =====================================================
+   MARKET (real data)
+===================================================== */
+let chSp=null, chVix=null;
+function lineChart(elId, series, color, existing){
+  if (existing) existing.destroy();
+  return new Chart(document.getElementById(elId),{
+    type:'line',
+    data:{labels:series.map(o=>o.date.slice(5)),datasets:[{data:series.map(o=>o.value),borderColor:color,backgroundColor:color.replace(')',',.08)').replace('rgb','rgba'),fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:7}},y:{grace:'5%'}}}
+  });
+}
+function setKpi(id, series, suffix=''){
+  if (!series || !series.length){ document.getElementById(id).textContent = 'n/a'; return null; }
+  const last = series[series.length-1], prev = series[series.length-2] || last;
+  document.getElementById(id).textContent = last.value.toLocaleString('en-US',{maximumFractionDigits:2}) + suffix;
+  const d = document.getElementById(id+'-d');
+  const diff = last.value - prev.value;
+  d.textContent = `${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(2)} vs prior print`;
+  d.className = 'delta ' + (diff>=0?'up':'dn');
+  return last.value;
+}
+async function loadMacro(){
+  try{
+    const r = await fetch('/api/macro');
+    const j = await r.json();
+    state.macro = j;
+    if (j.live && j.series){
+      const s = j.series;
+      state.vixLatest = setKpi('m-vix', s.vix);
+      setKpi('m-sp', s.sp500);
+      setKpi('m-t10', s.treasury10y, '%');
+      setKpi('m-ff', s.fedfunds, '%');
+      if (s.sp500?.length) chSp = lineChart('chSp', s.sp500, 'rgb(30,123,77)', chSp);
+      if (s.vix?.length)  chVix = lineChart('chVix', s.vix, 'rgb(178,58,58)', chVix);
+      renderCorr(s.vix);
+      pushTicker(s);
+    } else {
+      ['m-vix','m-sp','m-t10','m-ff'].forEach(id=>document.getElementById(id).textContent='—');
+      pushTicker(null);
+    }
+  }catch(e){ pushTicker(null); }
+}
+async function loadFx(){
+  try{
+    const r = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR,GBP,JPY,CHF,INR,CAD,AUD,CNY');
+    const j = await r.json();
+    const entries = Object.entries(j.rates || {});
+    if (!entries.length) return;
+    let rows = '';
+    for (let i=0;i<entries.length;i+=2){
+      const a = entries[i], b = entries[i+1];
+      rows += `<tr><td class="mono">USD/${a[0]}</td><td class="mono">${a[1]}</td><td class="mono">${b?('USD/'+b[0]):''}</td><td class="mono">${b?b[1]:''}</td></tr>`;
+    }
+    document.getElementById('fxBody').innerHTML = rows;
+    state.fx = j.rates;
+  }catch(e){
+    document.getElementById('fxBody').innerHTML = '<tr><td colspan="4" class="mono">Live FX temporarily unavailable</td></tr>';
+  }
+}
+
+/* ---------- ticker ---------- */
+function pushTicker(s){
+  const items = [];
+  if (s){
+    const last = k => s[k]?.[s[k].length-1]?.value;
+    const prev = k => s[k]?.[s[k].length-2]?.value ?? last(k);
+    const arrow = k => last(k) >= prev(k) ? '<span class="up">▲</span>' : '<span class="dn">▼</span>';
+    if (last('sp500')) items.push(`<b>S&amp;P 500</b> ${last('sp500').toLocaleString()} ${arrow('sp500')}`);
+    if (last('vix')) items.push(`<b>VIX</b> ${last('vix').toFixed(2)} ${arrow('vix')}`);
+    if (last('treasury10y')) items.push(`<b>10Y UST</b> ${last('treasury10y').toFixed(2)}% ${arrow('treasury10y')}`);
+    if (last('fedfunds')) items.push(`<b>FED FUNDS</b> ${last('fedfunds').toFixed(2)}%`);
+  }
+  if (state.fx){
+    items.push(`<b>USD/EUR</b> ${state.fx.EUR}`);
+    items.push(`<b>USD/JPY</b> ${state.fx.JPY}`);
+    items.push(`<b>USD/GBP</b> ${state.fx.GBP}`);
+  }
+  items.push(`<b>PLATFORM</b> ${fmt(state.active)} active clients`);
+  items.push(`<b>SESSIONS/HR</b> ${fmt(state.sessionsHr)}`);
+  items.push(`<b>FUNDED TODAY</b> ${fmt(state.funded)}`);
+  const track = document.getElementById('tickerTrack');
+  track.innerHTML = items.map(i=>`<span class="ticker-item">${i}</span>`).join('') || '<span class="ticker-item">Loading live market data…</span>';
+}
+setInterval(()=>pushTicker(state.macro?.series), 30000);
+
+/* =====================================================
+   TRACKING PLAN
+===================================================== */
+const TRACKING = [
+  ['session_start','Client opens web or mobile app','platform, segment, entry_point','Platform Analytics','No','ok'],
+  ['profile_created','Onboarding profile submitted','segment, referral_source','Growth','Yes','ok'],
+  ['risk_assessment_started','First questionnaire page viewed','device, segment','Onboarding','No','ok'],
+  ['risk_assessment_completed','Final questionnaire page submitted','risk_score_band, duration_sec','Onboarding','No','ok'],
+  ['account_funded','First transfer settles','amount_band, funding_method','Payments','Yes','ok'],
+  ['first_investment_placed','First order executed','product_type, channel','Investing','No','ok'],
+  ['goal_plan_created','Goal planner saved','goal_type, horizon_years','Planning','No','ok'],
+  ['goal_plan_updated','Existing plan edited','goal_type, change_type','Planning','No','ok'],
+  ['advisor_message_sent','Client sends advisor a message','thread_age, segment','Advisor Experience','Yes','ok'],
+  ['performance_report_viewed','Quarterly report opened','period, format','Reporting','No','ok'],
+  ['tax_document_downloaded','Tax center download','doc_type, tax_year','Reporting','Yes','ok'],
+  ['vesting_event_viewed','Equity vesting planner opened','plan_type, employer_band','Workplace','Yes','rev'],
+  ['rebalance_order_placed','Rebalance confirmed','drift_pct, trigger','Investing','No','rev'],
+  ['market_alert_clicked','Push/email market alert opened','alert_type, vix_band','Engagement','No','rev']
+];
+document.getElementById('trackingBody').innerHTML = TRACKING.map(t=>`
+  <tr>
+    <td class="mono">${t[0]}</td><td>${t[1]}</td><td class="mono">${t[2]}</td><td>${t[3]}</td>
+    <td><span class="tag ${t[4]==='Yes'?'pii':'no'}">${t[4]==='Yes'?'PII':'None'}</span></td>
+    <td><span class="tag ${t[5]==='ok'?'ok':'rev'}">${t[5]==='ok'?'Approved':'In Review'}</span></td>
+  </tr>`).join('');
+
+/* =====================================================
+   AI INSIGHTS
+===================================================== */
+document.getElementById('aiBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('aiBtn');
+  const out = document.getElementById('aiOut');
+  const note = document.getElementById('aiNote');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Analyzing live snapshot…';
+  out.innerHTML = ''; note.textContent = '';
+  const s = state.macro?.series || {};
+  const last = k => s[k]?.[s[k].length-1]?.value ?? null;
+  const snapshot = {
+    engagement: { active_clients: state.active, sessions_per_hour: state.sessionsHr, accounts_funded_today: state.funded, goal_plans_created_today: state.goals },
+    onboarding_funnel_30d: Object.fromEntries(Object.entries(FUNNELS).map(([k,v])=>[k, Object.fromEntries(STAGES.map((st,i)=>[st, v[i]]))])),
+    retention: { week8_with_goal_plan: '61%', week8_without_goal_plan: '26%', newest_cohort_week1: '69%' },
+    biggest_dropoff: 'Risk Assessment to Fund Account, mass affluent segment, 68% of exits on mobile transfer-amount screen',
+    market: { vix: last('vix'), sp500: last('sp500'), treasury_10y: last('treasury10y'), fed_funds: last('fedfunds') }
+  };
+  try{
+    const r = await fetch('/api/insights',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({snapshot})});
+    const j = await r.json();
+    if (!r.ok || !j.text) throw new Error(j.detail || j.error || 'No response');
+    out.innerHTML = mdToHtml(j.text);
+    note.textContent = 'Generated from the live metrics snapshot at ' + new Date().toLocaleTimeString();
+  }catch(e){
+    out.innerHTML = '<p>Insight service is not reachable right now. The snapshot below is what would be analyzed:</p><pre class="mono" style="white-space:pre-wrap;margin-top:10px;font-size:11.5px;background:#F6F4EE;padding:12px;border-radius:6px">'+JSON.stringify(snapshot,null,2)+'</pre>';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Generate Insights from Live Data';
+});
+
+function mdToHtml(md){
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/^## (.*)$/gm,'<h4>$1</h4>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^\d+\.\s(.*)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g,'<ol>$1</ol>')
+    .replace(/\n{2,}/g,'<br>');
+}
+
+/* =====================================================
+   NAV + BOOT
+===================================================== */
+document.querySelector('nav').addEventListener('click', e=>{
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('tab-'+e.target.dataset.tab).classList.add('active');
+});
+
+renderKpis();
+pushTicker(null);
+scheduleEvent();
+loadMacro();
+loadFx();
+setInterval(loadMacro, 30*60*1000);
+</script>
+</body>
+</html>
